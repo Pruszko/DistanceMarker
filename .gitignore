@@ -1,0 +1,12 @@
+/*.wotmod
+/*.zip
+/*.pyc
+/*.py
+/.idea
+/*/*.xml
+/*.bat
+
+/versions/*
+/**/*.swf
+src_flash/*/obj/*
+DistanceMarker/**
