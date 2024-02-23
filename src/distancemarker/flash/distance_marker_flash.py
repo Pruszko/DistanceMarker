@@ -12,6 +12,24 @@ from gui.Scaleform.framework.entities.BaseDAAPIModule import BaseDAAPIModule
 logger = logging.getLogger(__name__)
 
 
+# very simple pool to avoid allocating dict that much
+class _SimpleDictPool(object):
+
+    def __init__(self):
+        self.pool = []
+
+    def __getitem__(self, item):
+        return self.pool[item]
+
+    def ensureLength(self, length):
+        lackingCount = length - len(self.pool)
+        if lackingCount <= 0:
+            return
+
+        for i in range(lackingCount):
+            self.pool.append({})
+
+
 class DistanceMarkerFlashMeta(BaseDAAPIModule):
     pass
 
@@ -29,14 +47,15 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         self._configureApp()
 
         self._isAltPressed = False
-        self._emptyList = []
 
-        screenResolution = GUI.screenResolution()
+        # objects used for optimizations
+        self._tempMatrix = Math.Matrix()
+        self._emptyList = []
+        self._dictPool = _SimpleDictPool()
 
         # state per frame render
-        self._tempMatrix = Math.Matrix()
+        screenResolution = GUI.screenResolution()
         self._currentViewProjectionMatrix = Math.Matrix()
-
         self._currentScreenWidth = screenResolution[0]
         self._currentScreenHeight = screenResolution[1]
         self._currentFrameData = {
@@ -107,7 +126,7 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
 
         self._currentFrameData["screenWidth"] = self._currentScreenWidth = screenResolution[0]
         self._currentFrameData["screenHeight"] = self._currentScreenHeight = screenResolution[1]
-        self._currentFrameData["observedVehicles"] = self._emptyList
+        self._currentFrameData["observedVehicles"] = self._emptyList  # avoid allocating empty list in most cases
 
         if not self._isAltPressed:
             # if ALT key is not pressed, return small constant data
@@ -139,9 +158,26 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
 
         self._updateViewProjectionMatrix()
 
+        vehicles = BigWorld.player().vehicles
+
+        # to avoid allocating dict that much, we will use simple dict pooling
+        #
+        # to keep it fast and simple, following code contract is made:
+        # - ensure pool length to be at least the length of vehicles set being serialized every frame
+        #   - this in most common cases won't make any new objects
+        # - every vehicle serialization method call must use independent dict from that pool
+        # - every dict must have same structure
+        #
+        # we don't need "return to pool" logic, and we don't even want to do it
+        # because returned dict must be valid until it is at least sent and serialized to SWF app
+        # we can't hook into that when it happens
+        # so to keep things simple, leave resulting objects as they are
+        #
+        # after all that, we can safely reference same dicts again in next frame
+        self._dictPool.ensureLength(len(vehicles))
         self._currentFrameData["observedVehicles"] = [
-            self._serializeObservedVehicle(currentPlayerPosition, vehicle)
-            for vehicle in BigWorld.player().vehicles
+            self._serializeObservedVehicle(currentPlayerPosition, vehicle, self._dictPool[poolIndex])
+            for poolIndex, vehicle in enumerate(vehicles)
             if vehicle.isAlive() and vehicle.id != currentVehicleID
         ]
 
@@ -151,10 +187,11 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         proj = BigWorld.projection()
         aspect = BigWorld.getAspectRatio()
 
+        # basically: camera matrix * perspective projection = matrix used for 3d -> 2d projection
         self._currentViewProjectionMatrix.perspectiveProjection(proj.fov, aspect, proj.nearPlane, proj.farPlane)
         self._currentViewProjectionMatrix.preMultiply(BigWorld.camera().matrix)
 
-    def _serializeObservedVehicle(self, currentPlayerPosition, vehicle):
+    def _serializeObservedVehicle(self, currentPlayerPosition, vehicle, pooledVehicleDict):
         # projected point has scaled x and y between -1 and 1
         # where x starts from left -1 to right 1
         # and y starts from bottom -1 to top 1
@@ -162,8 +199,7 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         # for AS3, we will need them scaled between 0 and 1 and have inverted y
         # because (0, 0) point in Flash starts from top left
         #
-        # here we will only normalize it between 0 and 1 and invert y
-        # and swf app will use it properly according to full screen
+        # then it is mapped to full screen resolution which swf app is aware of
         self._tempMatrix.set(vehicle.matrix)
         vehiclePosition = self._tempMatrix.translation
 
@@ -178,13 +214,14 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         x = normalizedVehiclePositionX * self._currentScreenWidth
         y = normalizedVehiclePositionY * self._currentScreenHeight
 
-        return {
-            "id": str(vehicle.id),
-            "currentDistance": currentDistance,
-            "x": x,
-            "y": y,
-            "isVisible": isPointOnScreen
-        }
+        # modify and return pooled dict
+        pooledVehicleDict["id"] = str(vehicle.id),
+        pooledVehicleDict["currentDistance"] = currentDistance,
+        pooledVehicleDict["x"] = x,
+        pooledVehicleDict["y"] = y,
+        pooledVehicleDict["isVisible"] = isPointOnScreen
+
+        return pooledVehicleDict
 
     def _projectPointWithVisibilityResult(self, point):
         posInClip = Math.Vector4(point.x, point.y, point.z, 1)

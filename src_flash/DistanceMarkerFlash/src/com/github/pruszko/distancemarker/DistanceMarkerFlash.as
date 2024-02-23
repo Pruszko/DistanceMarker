@@ -51,11 +51,14 @@ package com.github.pruszko.distancemarker
 			
 			var serializedFrameData:Object = this.py_requestFrameData();
 			
-			this.updateAppPositionAndState(serializedFrameData);
-			this.updateMarkersStatesAndVisibility(serializedFrameData);
+			this.updateAppPosition(serializedFrameData);
+			this.updateMarkers(serializedFrameData);
+			
+			var observedVehicles:Array = serializedFrameData["observedVehicles"];
+			observedVehicles.splice(0, observedVehicles.length);
 		}
 		
-		private function updateAppPositionAndState(serializedFrameData:Object) : void
+		private function updateAppPosition(serializedFrameData:Object) : void
 		{	
 			// Update flash app position to exactly top-left corner
 			var appWidth:int = serializedFrameData["screenWidth"];
@@ -79,7 +82,7 @@ package com.github.pruszko.distancemarker
 			this.y = SWF_HALF_HEIGHT - (appHeight / 2.0);
 		}
 		
-		private function updateMarkersStatesAndVisibility(serializedFrameData:Object) : void
+		private function updateMarkers(serializedFrameData:Object) : void
 		{
 			var observedVehicles:Array = serializedFrameData["observedVehicles"];
 			
@@ -89,16 +92,25 @@ package com.github.pruszko.distancemarker
 				return;
 			}
 			
-			var i:int, j:int;
-			var marker:DistanceMarker;
+			this.destroyInvalidMarkers(observedVehicles);
+			this.createOrUpdateMarkers(observedVehicles);
 			
-			// destroy markers of already invalid vehicles
-			nextMarkerLabel:
-			for (i = 0; i < this.numChildren;)
+			// sort markers by distance every certain interval
+			if (--this._sortByDistanceCountdown <= 0)
 			{
-				marker = this.getMarkerAt(i);
+				this._sortByDistanceCountdown = DISTANCE_DEPTH_SORT_INTERVAL;
+				this.sortMarkersByDistance();
+			}
+		}
+		
+		private function destroyInvalidMarkers(observedVehicles:Array) : void
+		{			
+			nextMarkerLabel:
+			for (var i:int = 0; i < this.numChildren;)
+			{
+				var marker:DistanceMarker = this.getMarkerAt(i);
 				
-				for (j = 0; j < observedVehicles.length; ++j)
+				for (var j:int = 0; j < observedVehicles.length; ++j)
 				{
 					if (marker.name == observedVehicles[j]["id"])
 					{
@@ -110,7 +122,10 @@ package com.github.pruszko.distancemarker
 				this.removeChildAt(i);
 				marker.disposeState();
 			}
-			
+		}
+		
+		private function createOrUpdateMarkers(observedVehicles:Array) : void
+		{
 			// update distance text every certain interval
 			var shouldRefreshDistance:Boolean = false;
 			if (--this._updateDistanceCountdown <= 0)
@@ -121,13 +136,13 @@ package com.github.pruszko.distancemarker
 			
 			// Update all markers to proper 2d position starting from left-corner
 			// also update their visibility in screen
-			for (i = 0; i < observedVehicles.length; ++i)
+			for (var i:int = 0; i < observedVehicles.length; ++i)
 			{
 				var observedVehicle:Object = observedVehicles[i];
 				
 				// implicitly create markers for newly seen vehicles
 				// this also invalidates distance sorting on creation
-				marker = this.getOrCreateMarkerById(observedVehicle["id"]);
+				var marker:DistanceMarker = this.getOrCreateMarkerById(observedVehicle["id"]);
 				
 				var currentDistance:Number = observedVehicle["currentDistance"];
 				var x:Number = observedVehicle["x"];
@@ -148,21 +163,12 @@ package com.github.pruszko.distancemarker
 					marker.visible = isVisible;
 				}
 			}
-			
-			// sort markers by distance every certain interval
-			if (--this._sortByDistanceCountdown <= 0)
-			{
-				this._sortByDistanceCountdown = DISTANCE_DEPTH_SORT_INTERVAL;
-				this.sortMarkersByDistance();
-			}
-			
-			observedVehicles.splice(0, observedVehicles.length);
 		}
 		
 		private function sortMarkersByDistance() : void
 		{
 			// using insertion sort due to few pros:
-			// - in almost-best case (marker added at the end) it has close to O(n) complexity
+			// - in almost-best cases (ex. marker added at the end) it has close to O(n) complexity
 			// - it doesn't require any data structures
 			for(var i:int = 1; i < this.numChildren; i++) {
 				var j:int = i;
