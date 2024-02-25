@@ -1,7 +1,7 @@
 ## DistanceMarker
 A simple mod displaying marker with a distance to other tanks when **ALT key** is pressed.
 
-![Preview image](images/preview.png)
+![Preview image](images/preview.jpg)
 
 ## Resources
 * [WG Mods](https://wgmods.net/6662/)
