@@ -3,8 +3,10 @@ A simple mod displaying marker with a distance to other tanks when **ALT key** i
 
 ![Preview image](images/preview.jpg)
 
-## Resources
+## Download sites
+Here are websites, where mod is uploaded directly by me:
 * [WG Mods](https://wgmods.net/6662/)
+* [CurseForge](https://www.curseforge.com/worldoftanks/wot-mods/distance-marker)
 * [GitHub release page](https://github.com/Pruszko/DistanceMarker/releases)
 
 ## Installation
