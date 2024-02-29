@@ -1,0 +1,89 @@
+{
+  "modname": "Distance Marker",
+  "checked": "checked",
+  "unchecked": "unchecked",
+  "defaultValue": "default",
+  "intro.label": "Config file info",
+  "intro.header": "Config file",
+  "intro.body": [
+    "Config can also be changed by manually altering config file.\n\n",
+    "Config file location:\n",
+    "- [WoT game directory]/mods/configs/DistanceMarker/config.json"
+  ],
+  "intro.note": [
+    "If you want to generate default config file, delete it and launch a game again."
+  ],
+  "visibility-settings.label": "Visibility settings",
+  "display-mode.header": "Display mode",
+  "display-mode.body": [
+    "Configures when marker should be displayed:\n",
+    "- Always - displays marker always,\n",
+    "- On ALT pressed - when ALT key is being pressed."
+  ],
+  "display-mode.option.always": "Always",
+  "display-mode.option.on-alt-pressed": "On ALT key pressed",
+  "marker-target.header": "Marker target",
+  "marker-target.body": [
+    "Configures for which tanks marker should be displayed:\n",
+    "- Ally and enemy - for all tanks,\n",
+    "- Only enemy - only for enemies."
+  ],
+  "marker-target.option.ally-and-enemy": "Ally and enemy",
+  "marker-target.option.only-enemy": "Only enemy",
+  "position-settings.label": "Position settings (draggable in battle with mouse)",
+  "anchor-position.header": "Anchor position",
+  "anchor-position.body": [
+    "Position at which markers are initially displayed with zero offsets:\n",
+    "- Tank marker - at standard tank marker position,\n",
+    "- Tank center - at tank center position,\n",
+    "- Tank bottom - at tank bottom position."
+  ],
+  "anchor-position.option.tank-marker": "Tank marker",
+  "anchor-position.option.tank-center": "Tank center",
+  "anchor-position.option.tank-bottom": "Tank bottom",
+  "lock-position-offsets.header": "Lock anchor offsets in battle",
+  "lock-position-offsets.body": [
+    "When checked, markers positions offsets can no longer be edited during battle.\n",
+    "Useful if you want to prevent accidental change."
+  ],
+  "anchor-horizontal-offset.header": "Anchor horizontal offset",
+  "anchor-horizontal-offset.body": [
+    "Controls horizontal marker offset relative to anchor position, in pixels.\n",
+    "Positive values moves marker to right side, negative values - to left side.\n\n",
+    "Hint: Offsets can be visually edited during battle by dragging markers ",
+    "with mouse while CTRL key is being held.\n",
+    "Offsets will be saved in configuration on battle finish or manual exit."
+  ],
+  "anchor-vertical-offset.header": "Anchor vertical offset",
+  "anchor-vertical-offset.body": [
+    "Controls vertical marker offset relative to anchor position, in pixels.\n",
+    "Positive values moves marker upwards, negative values - downwards.\n\n",
+    "Hint: Offsets can be visually edited during battle by dragging markers ",
+    "with mouse while CTRL key is being held.\n",
+    "Offsets will be saved in configuration on battle finish or manual exit."
+  ],
+  "visual-settings.label": "Visual settings",
+  "decimal-precision.header": "Decimal precision",
+  "decimal-precision.body": [
+    "Decimal precision of displayed distance."
+  ],
+  "text-size.header": "Text size",
+  "text-size.body": [
+    "Size of text displayed in marker."
+  ],
+  "text-color.header": "Text color",
+  "text-color.body": [
+    "Colors text displayed in marker."
+  ],
+  "text-alpha.header": "Text alpha",
+  "text-alpha.body": [
+    "Controls transparency of text in markers:\n",
+    "- value 1.0 means full visibility,\n",
+    "- value 0.0 means zero visibility."
+  ],
+  "draw-text-shadow.header": "Draw text shadow",
+  "draw-text-shadow.body": [
+    "When checked, text is additionally displayed with smooth gradient shadow.\n",
+    "Useful when text blends with background."
+  ]
+}

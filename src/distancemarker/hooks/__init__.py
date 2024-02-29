@@ -1,1 +1,2 @@
+import distancemarker.hooks.aih_hooks
 import distancemarker.hooks.vehicle_plugins_hooks

@@ -1,6 +1,7 @@
 package com.github.pruszko.distancemarker
 {
 
+	import com.github.pruszko.distancemarker.config.Config;
 	import com.github.pruszko.distancemarker.markers.DistanceMarker;
 	import flash.display.Sprite;
 	import flash.events.Event;
@@ -16,6 +17,8 @@ package com.github.pruszko.distancemarker
 		
 		// Python-side method required for in-between game state updates
 		public var py_requestFrameData:Function;
+		
+		private var _config:Config = new Config();
 		
 		private var _updateDistanceCountdown:int = 1;
 		private var _sortByDistanceCountdown:int = 1;
@@ -40,6 +43,9 @@ package com.github.pruszko.distancemarker
 			}
 			
 			this.removeChildren();
+			
+			this._config.disposeState();
+			this._config = null;
 		}
 		
 		private function onEnterFrame() : void
@@ -56,6 +62,29 @@ package com.github.pruszko.distancemarker
 			
 			var observedVehicles:Array = serializedFrameData["observedVehicles"];
 			observedVehicles.splice(0, observedVehicles.length);
+		}
+		
+		public function as_applyConfig(serializedConfig:Object) : void
+		{
+			this._config.deserialize(serializedConfig);
+		}
+		
+		public function as_isPointInMarker(mouseX:Number, mouseY:Number) : Boolean
+		{
+			// offset tested position by current position
+			mouseX += this.x;
+			mouseY += this.y;
+			
+			for (var i:int = 0; i < this.numChildren; ++i)
+			{
+				var marker:DistanceMarker = this.getMarkerAt(i);
+				
+				if (marker.isInBounds(mouseX, mouseY))
+				{
+					return true;
+				}
+			}
+			return false;
 		}
 		
 		private function updateAppPosition(serializedFrameData:Object) : void
@@ -182,12 +211,12 @@ package com.github.pruszko.distancemarker
 			}
 		}
 		
-		public function getMarkerAt(index:int) : DistanceMarker
+		private function getMarkerAt(index:int) : DistanceMarker
 		{
 			return this.getChildAt(index) as DistanceMarker;
 		}
 		
-		public function getOrCreateMarkerById(vehicleID:String) : DistanceMarker
+		private function getOrCreateMarkerById(vehicleID:String) : DistanceMarker
 		{
 			var marker:DistanceMarker = this.getChildByName(vehicleID) as DistanceMarker;
 			if (marker != null)
@@ -195,7 +224,7 @@ package com.github.pruszko.distancemarker
 				return marker;
 			}
 			
-			marker = new DistanceMarker();
+			marker = new DistanceMarker(this);
 			marker.name = vehicleID;
 			
 			this.addChild(marker);
@@ -203,6 +232,11 @@ package com.github.pruszko.distancemarker
 			this._sortByDistanceCountdown = 1;
 			
 			return marker;
+		}
+		
+		public function get config() : Config
+		{
+			return this._config;
 		}
 		
 	}

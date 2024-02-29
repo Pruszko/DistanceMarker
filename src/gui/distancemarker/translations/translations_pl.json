@@ -1,0 +1,89 @@
+{
+  "modname": "Znacznik odległości",
+  "checked": "zaznaczone",
+  "unchecked": "odznaczone",
+  "defaultValue": "domyślnie",
+  "intro.label": "Informacje o pliku konfiguracyjnym",
+  "intro.header": "Plik konfiguracyjny",
+  "intro.body": [
+    "Konfiguracja może także zostać zmieniona poprzez manualne modyfikacje pliku konfiguracyjnego.\n\n",
+    "Lokalizacja pliku konfiguracyjnego:\n",
+    "- [Folder gry WoT]/mods/configs/DistanceMarker/config.json"
+  ],
+  "intro.note": [
+    "Jeżeli chcesz wygenerować domyślny plik konfiguracyjny, usuń go a następnie uruchom grę ponownie."
+  ],
+  "visibility-settings.label": "Ustawienia widoczności",
+  "display-mode.header": "Tryb wyświetlania",
+  "display-mode.body": [
+    "Ustawia kiedy znacznik ma być wyświetlany:\n",
+    "- Zawsze - wyświetla znacznik zawsze,\n",
+    "- Przytrzymując przycisk ALT - gdy przycisk ALT jest przytrzymany."
+  ],
+  "display-mode.option.always": "Zawsze",
+  "display-mode.option.on-alt-pressed": "Przytrzymując przycisk ALT",
+  "marker-target.header": "Cel znacznika",
+  "marker-target.body": [
+    "Konfiguruje dla jakich czołgów znacznik powinien być wyświetlany:\n",
+    "- Sojusznicy i wrogowie - dla każdego czołgu,\n",
+    "- Tylko wrogowie - tylko dla wrogów."
+  ],
+  "marker-target.option.ally-and-enemy": "Sojusznicy i wrogowie",
+  "marker-target.option.only-enemy": "Tylko wrogowie",
+  "position-settings.label": "Ustawienia pozycji (przesuwalne w bitwie myszką)",
+  "anchor-position.header": "Pozycja zaczepienia",
+  "anchor-position.body": [
+    "Pozycja względem której znaczniki są wyświetlane przy zerowych przesunięciach:\n",
+    "- Znacznik czołgu - w pozycji standardowego znacznika czołgu,\n",
+    "- Środek czołgu - w pozycji środka czołgu,\n",
+    "- Dół czołgu - pod spodem czołgu."
+  ],
+  "anchor-position.option.tank-marker": "Znacznik czołgu",
+  "anchor-position.option.tank-center": "Środek czołgu",
+  "anchor-position.option.tank-bottom": "Dół czołgu",
+  "lock-position-offsets.header": "Zablokuj przesunięcia zaczepień w bitwie",
+  "lock-position-offsets.body": [
+    "Gdy zaznaczone, pozycje znaczników nie będą dłużej możliwe do edycji w trakcie bitwy.\n",
+    "Przydatne gdy chcesz zapobiec przypadkowej zmianie."
+  ],
+  "anchor-horizontal-offset.header": "Przesunięcie zaczepienia w poziomie",
+  "anchor-horizontal-offset.body": [
+    "Kontroluje przesunięcie pozycji znacznika w poziomie względem punktu zaczepienia, w pikselach.\n",
+    "Wartości dodatnie przesuwają znacznik w prawo, ujemne wartości - w lewo.\n\n",
+    "Wskazówka: Przesunięcia mogą zostać zedytowane w bitwie poprzez przeciągnięcie ",
+    "ich myszką gdy przytrzymany jest przycisk CTRL.\n",
+    "Przesunięcia zostaną zapisane w konfiguracji po zakończeniu lub opuszczeniu bitwy."
+  ],
+  "anchor-vertical-offset.header": "Przesunięcie zaczepienia w pionie",
+  "anchor-vertical-offset.body": [
+    "Kontroluje przesunięcie pozycji znacznika w pionie względem punktu zaczepienia, w pikselach.\n",
+    "Dodatnie wartości przesuwają znacznik w górę, ujemne wartości - w dół.\n\n",
+    "Wskazówka: Przesunięcia mogą zostać zedytowane w bitwie poprzez przeciągnięcie ",
+    "ich myszką gdy przytrzymany jest przycisk CTRL.\n",
+    "Przesunięcia zostaną zapisane w konfiguracji po zakończeniu lub opuszczeniu bitwy."
+  ],
+  "visual-settings.label": "Ustawienia wyglądu",
+  "decimal-precision.header": "Precyzja po przecinku",
+  "decimal-precision.body": [
+    "Precyzja po przecinku wyświetlanej odległości."
+  ],
+  "text-size.header": "Wielkość tekstu",
+  "text-size.body": [
+    "Wielkość tekstu wyświetlanego w znaczniku."
+  ],
+  "text-color.header": "Kolor tekstu",
+  "text-color.body": [
+    "Koloruje tekst wyświetlany w znaczniku."
+  ],
+  "text-alpha.header": "Przezroczystość tekstu",
+  "text-alpha.body": [
+    "Kontroluje przezroczystość tekstu w znacznikach:\n",
+    "- wartość 1.0 oznacza pełną widoczność,\n",
+    "- wartość 0.0 oznacza brak widoczności."
+  ],
+  "draw-text-shadow.header": "Wyświetlaj cień tekstu",
+  "draw-text-shadow.body": [
+    "Gdy zaznaczone, teksty wyświetlany jest dodatkowo z gładkim cieniem.\n",
+    "Przydatne gdy tekst zlewa się z tłem."
+  ]
+}

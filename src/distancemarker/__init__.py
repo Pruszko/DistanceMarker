@@ -6,36 +6,71 @@ logger = logging.getLogger(__name__)
 
 class DistanceMarkerMod(object):
 
+    @property
+    def isModsSettingsApiPresent(self):
+        return self.__isModsSettingsApiPresent
+
     def __init__(self):
-        pass
+        self.__isModsSettingsApiPresent = False
 
-    # try-except with logged exception here is more than important, because
-    # when mod is initialized and some incompatibility occurs, it may break this (or other) mods
-    # mainly because:
-    # - AttributeError is silently ignored by mod loading code
-    #   what can lead to very weird "lack of errors" where game state is corrupted
-    #   due to unexpected module loading errors
-    # - other exceptions may basically break loading of other mods
-    #
-    # by this, at least we will see what is broken
-    try:
-        logger.info("Initializing DistanceMarker mod ...")
+    def init(self):
+        # try-except with logged exception here is more than important, because
+        # when mod is initialized and some incompatibility occurs, it may break this (or other) mods
+        # mainly because:
+        # - AttributeError is silently ignored by mod loading code
+        #   what can lead to very weird "lack of errors" where game state is corrupted
+        #   due to unexpected module loading errors
+        # - other exceptions may basically break loading of other mods
+        #
+        # by this, at least we will see what is broken
+        try:
+            logger.info("Initializing DistanceMarker mod ...")
 
-        # it is good to know from the logs which client may have compatibility problems
-        # it's not obviously logged anywhere by any client, or I am just blind
-        from distancemarker.utils import getClientType
-        logger.info("Client type: %s", getClientType())
+            # it is good to know from the logs which client may have compatibility problems
+            # it's not obviously logged anywhere by any client, or I am just blind
+            from distancemarker.utils import getClientType
+            logger.info("Client type: %s", getClientType())
 
-        # make sure to invoke all hooks
-        import distancemarker.hooks
+            # load translations as early as possible
+            from distancemarker.settings import translations
+            translations.loadTranslations()
 
-        logger.info("DistanceMarker mod initialized")
-    except Exception:
-        logger.error("Error occurred while initializing DistanceMarker mod", exc_info=True)
+            # make sure to invoke all hooks
+            import distancemarker.hooks
 
-        from distancemarker.utils import displayDialog
-        displayDialog("Error occurred while initializing DistanceMarker mod.\n"
-                      "Contact mod developer with error logs for further support.")
+            # handle all soft dependencies
+            self.__resolveSoftDependenciesSafely()
+            if self.isModsSettingsApiPresent:
+                from distancemarker.support import mods_settings_api_support
+
+                mods_settings_api_support.registerSoftDependencySupport()
+
+            # load config
+            from distancemarker.settings.config import g_config
+            g_config.reloadSafely()
+
+            logger.info("DistanceMarker mod initialized")
+        except Exception:
+            logger.error("Error occurred while initializing DistanceMarker mod", exc_info=True)
+
+            from distancemarker.utils import displayDialog
+            displayDialog("Error occurred while initializing DistanceMarker mod.\n"
+                          "Contact mod developer with error logs for further support.")
+
+    def __resolveSoftDependenciesSafely(self):
+        try:
+            from gui.modsSettingsApi import g_modsSettingsApi
+
+            # if something crashed in ModsSettingsAPI, then singleton may be None
+            self.__isModsSettingsApiPresent = g_modsSettingsApi is not None
+
+            if not self.isModsSettingsApiPresent:
+                logger.warn("Error probably occurred in ModsSettingsAPI because it is None, ignore its presence.")
+        except ImportError:
+            self.__isModsSettingsApiPresent = False
+        except Exception:
+            logger.warn("Error occurred in ModsSettingsAPI, ignore its presence.", exc_info=True)
+            self.__isModsSettingsApiPresent = False
 
     def fini(self):
         pass

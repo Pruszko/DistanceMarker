@@ -1,5 +1,6 @@
 import logging
 
+from BWUtil import AsyncReturn
 from gui import DialogsInterface
 from gui.Scaleform.daapi.view.dialogs import SimpleDialogMeta, I18nInfoDialogButtons
 from realm import CURRENT_REALM
@@ -101,3 +102,50 @@ def await_callback_param(func, timeout=None, callbackParamName="callback"):
         return wg_await(promise.get_future(), timeout)
 
     return wrapper
+
+
+class ObservingSemaphore(object):
+
+    def __init__(self):
+        self.observerCount = 0
+
+    def __enter__(self):
+        self.observerCount += 1
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.observerCount -= 1
+
+    def __nonzero__(self):
+        return self.observerCount > 0
+
+    def withIgnoringLock(self, returnForIgnored):
+
+        def _withIgnoringLock(func):
+
+            def wrapper(*args, **kwargs):
+                if self:
+                    return returnForIgnored
+
+                with self:
+                    return func(*args, **kwargs)
+
+            return wrapper
+
+        return _withIgnoringLock
+
+    def withAsyncIgnoringLock(self, returnForIgnored):
+
+        def _withAsyncIgnoringLock(func):
+
+            @wg_async
+            def wrapper(*args, **kwargs):
+                if self:
+                    raise AsyncReturn(returnForIgnored)
+
+                with self:
+                    result = yield wg_await(func(*args, **kwargs))
+                    raise AsyncReturn(result)
+
+            return wrapper
+
+        return _withAsyncIgnoringLock

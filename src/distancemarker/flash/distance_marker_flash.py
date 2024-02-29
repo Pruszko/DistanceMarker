@@ -1,13 +1,20 @@
 import BigWorld
 import GUI
+import Keys
 import SCALEFORM
 import Math
 import logging
 
+from Event import EventManager, Event
 from gui import DEPTH_OF_VehicleMarker, InputHandler
 from gui.Scaleform.daapi.view.external_components import ExternalFlashComponent, ExternalFlashSettings
 from gui.Scaleform.flash_wrapper import InputKeyMode
 from gui.Scaleform.framework.entities.BaseDAAPIModule import BaseDAAPIModule
+
+from distancemarker.flash import serializeConfigParams
+from distancemarker.settings import clamp
+from distancemarker.settings.config import g_config
+from distancemarker.settings.config_param import g_configParams, DisplayMode, AnchorPosition, MarkerTarget
 
 logger = logging.getLogger(__name__)
 
@@ -31,31 +38,62 @@ class _SimpleDictPool(object):
 
 
 class DistanceMarkerFlashMeta(BaseDAAPIModule):
-    pass
+
+    def as_applyConfig(self, serializedConfig):
+        if self._isDAAPIInited():
+            return self.flashObject.as_applyConfig(serializedConfig)
+
+    def as_isPointInMarker(self, mouseX, mouseY):
+        if self._isDAAPIInited():
+            return self.flashObject.as_isPointInMarker(mouseX, mouseY)
 
 
 class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
 
-    def __init__(self):
+    _eventManager = EventManager()
+
+    onMouseEvent = Event(_eventManager)
+
+    def __init__(self, vehicleMarkerClass):
         super(DistanceMarkerFlash, self).__init__(
             ExternalFlashSettings("DistanceMarkerFlash",
                                   "DistanceMarkerFlash.swf",
                                   "root", None)
         )
 
+        # VehicleMarker class
+        self._vehicleMarkerClass = vehicleMarkerClass
+
         self.createExternalComponent()
         self._configureApp()
 
-        self._isAltPressed = False
+        # config state
+        self._displayMode = g_configParams.displayMode()
+        self._markerTarget = g_configParams.markerTarget()
+        self._anchorPosition = g_configParams.anchorPosition()
+        self._isOffsetChangeAllowed = not g_configParams.lockPositionOffsets()
+        self._currentHorizontalAnchorOffset = g_configParams.anchorHorizontalOffset()
+        self._currentVerticalAnchorOffset = -1 * g_configParams.anchorVerticalOffset()
+        self._wereOffsetsEdited = False
+
+        self._isDisplayingMarkers = self._displayMode == DisplayMode.ALWAYS
+        self._isMarkerDragging = False
+
+        if self._anchorPosition == AnchorPosition.TANK_MARKER:
+            self._markerPositionProvider = self._vehicleMarkerPositionProvider
+        elif self._anchorPosition == AnchorPosition.TANK_CENTER:
+            self._markerPositionProvider = self._vehicleCenterPositionProvider
+        else:
+            self._markerPositionProvider = self._vehicleBottomPositionProvider
 
         # objects used for optimizations
+        self._currentViewProjectionMatrix = Math.Matrix()
         self._tempMatrix = Math.Matrix()
         self._emptyList = []
         self._dictPool = _SimpleDictPool()
 
         # state per frame render
         screenResolution = GUI.screenResolution()
-        self._currentViewProjectionMatrix = Math.Matrix()
         self._currentScreenWidth = screenResolution[0]
         self._currentScreenHeight = screenResolution[1]
         self._currentFrameData = {
@@ -67,11 +105,23 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         InputHandler.g_instance.onKeyUp += self._onKeyUp
         InputHandler.g_instance.onKeyDown += self._onKeyDown
 
+        serializedConfig = serializeConfigParams()
+        self.as_applyConfig(serializedConfig)
+
     def close(self):
+        if self._isMarkerDragging:
+            self.onMouseEvent -= self._onMarkerDragging
+            self._isMarkerDragging = False
+
         InputHandler.g_instance.onKeyUp -= self._onKeyUp
         InputHandler.g_instance.onKeyDown -= self._onKeyDown
 
         super(DistanceMarkerFlash, self).close()
+
+        if self._wereOffsetsEdited:
+            g_configParams.anchorHorizontalOffset.value = self._currentHorizontalAnchorOffset
+            g_configParams.anchorVerticalOffset.value = -1 * self._currentVerticalAnchorOffset
+            g_config.persistParamsSafely()
 
     def _configureApp(self):
         # this is needed, otherwise everything will be white
@@ -86,7 +136,8 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         # depth sorting, required to be placed properly between other apps
         self.component.position.z = DEPTH_OF_VehicleMarker - 0.02
 
-        # this also does something
+        # don't capture input events
+        # we have to deal with them python-side anyway
         self.component.focus = False
         self.component.moveFocus = False
 
@@ -109,10 +160,42 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         # self.component.size = (1, 1)
 
     def _onKeyUp(self, event):
-        self._isAltPressed = event.isAltDown()
+        if self._displayMode == DisplayMode.ON_ALT_PRESSED:
+            self._isDisplayingMarkers = event.isAltDown()
+
+        if self._isMarkerDragging and self._isLeftMouseButton(event):
+            self._isMarkerDragging = False
+            self.onMouseEvent -= self._onMarkerDragging
 
     def _onKeyDown(self, event):
-        self._isAltPressed = event.isAltDown()
+        if self._displayMode == DisplayMode.ON_ALT_PRESSED:
+            self._isDisplayingMarkers = event.isAltDown()
+
+        cursor = GUI.mcursor()
+
+        if (self._isDisplayingMarkers and self._isOffsetChangeAllowed
+                and event.isCtrlDown() and self._isLeftMouseButton(event)
+                and cursor.inWindow and cursor.inFocus):
+            mouseX, mouseY = cursor.position
+            screenX, screenY = self._toScreenPixelPosition(mouseX, mouseY)
+
+            if self.as_isPointInMarker(screenX, screenY):
+                self._isMarkerDragging = True
+                self.onMouseEvent += self._onMarkerDragging
+
+    @staticmethod
+    def _isLeftMouseButton(event):
+        return event.isMouseButton() and event.key == Keys.KEY_LEFTMOUSE
+
+    def _onMarkerDragging(self, dx, dy):
+        self._currentHorizontalAnchorOffset = clamp(g_configParams.anchorHorizontalOffset.minValue,
+                                                    self._currentHorizontalAnchorOffset + dx,
+                                                    g_configParams.anchorHorizontalOffset.maxValue)
+        self._currentVerticalAnchorOffset = clamp(g_configParams.anchorVerticalOffset.minValue,
+                                                  self._currentVerticalAnchorOffset + dy,
+                                                  g_configParams.anchorVerticalOffset.maxValue)
+
+        self._wereOffsetsEdited = True
 
     # IMPORTANT
     # this method is called by a swf app every frame in-between game logic
@@ -128,8 +211,8 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         self._currentFrameData["screenHeight"] = self._currentScreenHeight = screenResolution[1]
         self._currentFrameData["observedVehicles"] = self._emptyList  # avoid allocating empty list in most cases
 
-        if not self._isAltPressed:
-            # if ALT key is not pressed, return small constant data
+        if not self._isDisplayingMarkers:
+            # if markers are not displayed, return small constant data
             return self._currentFrameData
 
         # player may not be present during context switching (for example replay backward rewind)
@@ -178,10 +261,19 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         self._currentFrameData["observedVehicles"] = [
             self._serializeObservedVehicle(currentPlayerPosition, vehicle, self._dictPool[poolIndex])
             for poolIndex, vehicle in enumerate(vehicles)
-            if vehicle.isAlive() and vehicle.id != currentVehicleID
+            if self._shouldDisplayForVehicle(vehicle, currentVehicleID)
         ]
 
         return self._currentFrameData
+
+    def _shouldDisplayForVehicle(self, vehicle, currentVehicleID):
+        if not vehicle.isAlive() or vehicle.id == currentVehicleID:
+            return False
+
+        if self._markerTarget == MarkerTarget.ALLY_AND_ENEMY:
+            return True
+
+        return BigWorld.player().team != vehicle.publicInfo["team"]
 
     def _updateViewProjectionMatrix(self):
         proj = BigWorld.projection()
@@ -192,36 +284,56 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         self._currentViewProjectionMatrix.preMultiply(BigWorld.camera().matrix)
 
     def _serializeObservedVehicle(self, currentPlayerPosition, vehicle, pooledVehicleDict):
-        # projected point has scaled x and y between -1 and 1
-        # where x starts from left -1 to right 1
-        # and y starts from bottom -1 to top 1
-        #
-        # for AS3, we will need them scaled between 0 and 1 and have inverted y
-        # because (0, 0) point in Flash starts from top left
-        #
-        # then it is mapped to full screen resolution which swf app is aware of
         self._tempMatrix.set(vehicle.matrix)
         vehiclePosition = self._tempMatrix.translation
 
         currentDistance = (vehiclePosition - currentPlayerPosition).length
-        vehiclePosition.y += 2.0
 
-        projectedVehiclePosition2d, isPointOnScreen = self._projectPointWithVisibilityResult(vehiclePosition)
+        markerPosition3d = self._markerPositionProvider(vehicle)
+        projectedMarkerPosition2d, isPointOnScreen = self._projectPointWithVisibilityResult(markerPosition3d)
 
-        normalizedVehiclePositionX = 0.5 + 0.5 * projectedVehiclePosition2d.x
-        normalizedVehiclePositionY = 0.5 - 0.5 * projectedVehiclePosition2d.y
-
-        x = normalizedVehiclePositionX * self._currentScreenWidth
-        y = normalizedVehiclePositionY * self._currentScreenHeight
+        x, y = self._toScreenPixelPosition(projectedMarkerPosition2d.x, projectedMarkerPosition2d.y)
 
         # modify and return pooled dict
         pooledVehicleDict["id"] = str(vehicle.id),
         pooledVehicleDict["currentDistance"] = currentDistance,
-        pooledVehicleDict["x"] = x,
-        pooledVehicleDict["y"] = y,
+        pooledVehicleDict["x"] = x + self._currentHorizontalAnchorOffset,
+        pooledVehicleDict["y"] = y + self._currentVerticalAnchorOffset,
         pooledVehicleDict["isVisible"] = isPointOnScreen
 
         return pooledVehicleDict
+
+    def _vehicleMarkerPositionProvider(self, vehicle):
+        # fetchMatrixProvider is decently cheap to call
+        # at least I hope so
+        # who knows what GUI.WGVehicleMarkersMatrixProvider does under the hood
+        vehicleMarkerMatrixProvider = self._vehicleMarkerClass.fetchMatrixProvider(vehicle)
+
+        self._tempMatrix.set(vehicleMarkerMatrixProvider)
+        return self._tempMatrix.translation
+
+    def _vehicleCenterPositionProvider(self, vehicle):
+        self._tempMatrix.set(vehicle.matrix)
+        vehicleCenterPosition = self._tempMatrix.translation
+        vehicleCenterPosition.y += 2.0
+
+        return vehicleCenterPosition
+
+    def _vehicleBottomPositionProvider(self, vehicle):
+        self._tempMatrix.set(vehicle.matrix)
+        vehicleCenterPosition = self._tempMatrix.translation
+        vehicleCenterPosition.y -= 1.0
+
+        return vehicleCenterPosition
+
+    # projected point and mouse point events have scaled x and y between -1 and 1
+    # where x starts from left -1 to right 1
+    # and y starts from bottom -1 to top 1
+    #
+    # for AS3, we will need them scaled between 0 and 1 and have inverted y
+    # because (0, 0) point in Flash starts from top left
+    #
+    # then it is mapped to full screen resolution which swf app is aware of
 
     def _projectPointWithVisibilityResult(self, point):
         posInClip = Math.Vector4(point.x, point.y, point.z, 1)
@@ -236,3 +348,11 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
             posInClip = posInClip.scale(1 / posInClip.w)
 
         return posInClip, visible
+
+    def _toScreenPixelPosition(self, x, y):
+        normalizedX = 0.5 + 0.5 * x
+        normalizedY = 0.5 - 0.5 * y
+
+        # reuse any cached screen resolution there is from frame data requests
+        return (normalizedX * self._currentScreenWidth,
+                normalizedY * self._currentScreenHeight)

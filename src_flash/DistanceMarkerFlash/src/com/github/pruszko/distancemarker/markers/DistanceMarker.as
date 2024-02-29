@@ -1,5 +1,7 @@
 package com.github.pruszko.distancemarker.markers 
 {
+	import com.github.pruszko.distancemarker.config.Config;
+	import com.github.pruszko.distancemarker.DistanceMarkerFlash;
 	import com.github.pruszko.distancemarker.utils.Disposable;
 	import flash.display.Shape;
 	import flash.display.Sprite;
@@ -12,21 +14,28 @@ package com.github.pruszko.distancemarker.markers
 	public class DistanceMarker extends Sprite implements Disposable
 	{
 
+		private var _app:DistanceMarkerFlash;
+		
 		private var _currentDistance:Number = -1.0;
 		
 		private var _textField:TextField = new TextField();
-		private var _shape:Shape = new Shape();
+		private var _shape:Shape;
 		
-		public function DistanceMarker() 
+		public function DistanceMarker(app:DistanceMarkerFlash) 
 		{
 			super()
 			
-			this.alpha = 0.8;
+			this._app = app;
 			
-			this._shape.alpha = 0.6;
-			this._shape.filters = [new BlurFilter(10, 10, 2)];
-			this.addChild(this._shape);
+			if (this.config.drawTextShadow)
+			{
+				this._shape = new Shape();
+				this._shape.alpha = 0.35;
+				this._shape.filters = [new BlurFilter(10, 10, 2)];
+				this.addChild(this._shape);
+			}
 			
+			this._textField.alpha = this.config.textAlpha
 			this._textField.autoSize = TextFieldAutoSize.CENTER;
 			this._textField.background = false;
 			this._textField.border = false;
@@ -34,24 +43,30 @@ package com.github.pruszko.distancemarker.markers
 			this._textField.selectable = false;
 			this._textField.type = TextFieldType.DYNAMIC;
 			this._textField.wordWrap = false;
-			this._textField.defaultTextFormat = new TextFormat("$FieldFont", 12, 0xFFFFFF);
+			this._textField.defaultTextFormat = new TextFormat("$TitleFont", this.config.textSize, this.config.textColor);
 			
 			this._textField.text = "? m";
 			this._textField.x = -this._textField.textWidth / 2.0
 						
 			this.addChild(this._textField);
 			
-			this.updateBackgroundShape();
+			if (this.config.drawTextShadow)
+			{
+				this.updateBackgroundShape();
+			}
 		}
 		
 		public function set currentDistance(currentDistance:Number) : void
 		{	
 			this._currentDistance = currentDistance;
 			
-			this._textField.text = currentDistance.toFixed(2).toString() + " m";
+			this._textField.text = currentDistance.toFixed(this.config.decimalPrecision).toString() + " m";
 			this._textField.x = -this._textField.textWidth / 2.0
 			
-			this.updateBackgroundShape();
+			if (this.config.drawTextShadow)
+			{
+				this.updateBackgroundShape();
+			}
 		}
 		
 		private function updateBackgroundShape() : void
@@ -77,7 +92,23 @@ package com.github.pruszko.distancemarker.markers
 			this.removeChild(this._textField);
 			this._textField = null;
 			
-			this.removeChild(this._shape);
+			if (this.config.drawTextShadow)
+			{
+				this.removeChild(this._shape);
+				this._shape = null;
+			}
+			
+			this._app = null;
+		}
+		
+		public function isInBounds(mouseX:Number, mouseY:Number) : Boolean
+		{
+			return this._textField.hitTestPoint(mouseX, mouseY);
+		}
+		
+		private function get config() : Config
+		{
+			return this._app.config;
 		}
 		
 	}
