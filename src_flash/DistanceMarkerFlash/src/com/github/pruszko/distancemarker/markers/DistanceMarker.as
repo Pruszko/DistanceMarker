@@ -6,6 +6,7 @@ package com.github.pruszko.distancemarker.markers
 	import flash.display.Shape;
 	import flash.display.Sprite;
 	import flash.filters.BlurFilter;
+	import flash.text.AntiAliasType;
 	import flash.text.TextField;
 	import flash.text.TextFieldAutoSize;
 	import flash.text.TextFieldType;
@@ -36,6 +37,7 @@ package com.github.pruszko.distancemarker.markers
 			}
 			
 			this._textField.alpha = this.config.textAlpha
+			this._textField.antiAliasType = AntiAliasType.NORMAL;
 			this._textField.autoSize = TextFieldAutoSize.CENTER;
 			this._textField.background = false;
 			this._textField.border = false;

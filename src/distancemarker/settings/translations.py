@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 # used only for debugging
 DEBUG_LANGUAGE = None
 
+# thanks to:
+# - shuxue - for Russian translations
 
 DEFAULT_TRANSLATIONS_MAP = {}
 TRANSLATIONS_MAP = {}

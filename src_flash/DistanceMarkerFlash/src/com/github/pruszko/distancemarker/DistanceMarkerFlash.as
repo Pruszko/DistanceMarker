@@ -5,6 +5,7 @@ package com.github.pruszko.distancemarker
 	import com.github.pruszko.distancemarker.markers.DistanceMarker;
 	import flash.display.Sprite;
 	import flash.events.Event;
+	import flash.utils.getTimer;
 	
 	public class DistanceMarkerFlash extends Sprite 
 	{
@@ -12,16 +13,18 @@ package com.github.pruszko.distancemarker
 		private static const SWF_HALF_WIDTH:Number = 400;
 		private static const SWF_HALF_HEIGHT:Number = 300;
 		
-		private static const DISTANCE_REFRESH_INTERVAL:int = 12;
-		private static const DISTANCE_DEPTH_SORT_INTERVAL:int = 60;
+		// use relative time because when VSync is enabled, then SWF app
+		// has fixed fps, which overrides our fps set in app properties
+		private static const REFRESH_DISTANCE_INTERVAL_MS:int = 100;
+		private static const SORT_BY_DISTANCE_INTERVAL_MS:int = 500;
 		
 		// Python-side method required for in-between game state updates
 		public var py_requestFrameData:Function;
 		
 		private var _config:Config = new Config();
 		
-		private var _updateDistanceCountdown:int = 1;
-		private var _sortByDistanceCountdown:int = 1;
+		private var _lastRefreshDistanceTimestamp:int = 0;
+		private var _lastSortByDistanceTimestamp:int = 0;
 
 		public function DistanceMarkerFlash() 
 		{
@@ -90,8 +93,8 @@ package com.github.pruszko.distancemarker
 		private function updateAppPosition(serializedFrameData:Object) : void
 		{	
 			// Update flash app position to exactly top-left corner
-			var appWidth:int = serializedFrameData["screenWidth"];
-			var appHeight:int = serializedFrameData["screenHeight"];
+			var screenWidth:int = serializedFrameData["screenWidth"];
+			var screenHeight:int = serializedFrameData["screenHeight"];
 			
 			// This is based on updatePosition() from battleDamageIndicatorApp.swf
 			// because it is the only source of "something is working" stuff 
@@ -107,8 +110,8 @@ package com.github.pruszko.distancemarker
 			// - substract half of the screen to move it to left top corner of the screen
 			// 
 			// Those changes MUST be done on flash object itself, not on GUI.Flash component
-			this.x = SWF_HALF_WIDTH - (appWidth / 2.0);
-			this.y = SWF_HALF_HEIGHT - (appHeight / 2.0);
+			this.x = SWF_HALF_WIDTH - (screenWidth / 2.0);
+			this.y = SWF_HALF_HEIGHT - (screenHeight / 2.0);
 		}
 		
 		private function updateMarkers(serializedFrameData:Object) : void
@@ -125,9 +128,10 @@ package com.github.pruszko.distancemarker
 			this.createOrUpdateMarkers(observedVehicles);
 			
 			// sort markers by distance every certain interval
-			if (--this._sortByDistanceCountdown <= 0)
+			var currentTime:int = getTimer();
+			if ((currentTime - this._lastSortByDistanceTimestamp) >= SORT_BY_DISTANCE_INTERVAL_MS)
 			{
-				this._sortByDistanceCountdown = DISTANCE_DEPTH_SORT_INTERVAL;
+				this._lastSortByDistanceTimestamp = currentTime;
 				this.sortMarkersByDistance();
 			}
 		}
@@ -157,9 +161,11 @@ package com.github.pruszko.distancemarker
 		{
 			// update distance text every certain interval
 			var shouldRefreshDistance:Boolean = false;
-			if (--this._updateDistanceCountdown <= 0)
+			
+			var currentTime:int = getTimer();
+			if ((currentTime - this._lastRefreshDistanceTimestamp) >= REFRESH_DISTANCE_INTERVAL_MS)
 			{
-				this._updateDistanceCountdown = DISTANCE_REFRESH_INTERVAL;
+				this._lastRefreshDistanceTimestamp = currentTime;
 				shouldRefreshDistance = true;
 			}
 			
@@ -229,7 +235,7 @@ package com.github.pruszko.distancemarker
 			
 			this.addChild(marker);
 			
-			this._sortByDistanceCountdown = 1;
+			this._lastSortByDistanceTimestamp = 0;
 			
 			return marker;
 		}

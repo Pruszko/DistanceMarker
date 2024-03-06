@@ -216,11 +216,17 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
             return self._currentFrameData
 
         # player may not be present during context switching (for example replay backward rewind)
-        if BigWorld.player() is None:
+        player = BigWorld.player()
+        if player is None:
+            return self._currentFrameData
+
+        # if GUI is hidden, hide markers as well
+        avatarInputHandler = player.inputHandler
+        if avatarInputHandler is not None and not avatarInputHandler.isGuiVisible:
             return self._currentFrameData
 
         currentVehicleID = -1
-        currentVehicle = BigWorld.player().getVehicleAttached()
+        currentVehicle = player.getVehicleAttached()
 
         if currentVehicle is not None:
             # use vehicle id for exclusion not to display marker for our tank
