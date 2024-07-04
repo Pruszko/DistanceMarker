@@ -31,3 +31,4 @@ Thanks to:
 * IzeBerg - for cool GUI configuration API
 * POLIROID - for ModsListAPI
 * shuxue - for Russian translations
+* eugenescodes - for Ukrainian translations
