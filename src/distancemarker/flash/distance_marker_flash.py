@@ -68,20 +68,16 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         self._configureApp()
 
         # config state
-        self._displayMode = g_configParams.displayMode()
-        self._markerTarget = g_configParams.markerTarget()
-        self._anchorPosition = g_configParams.anchorPosition()
-        self._isOffsetChangeAllowed = not g_configParams.lockPositionOffsets()
         self._currentHorizontalAnchorOffset = g_configParams.anchorHorizontalOffset()
         self._currentVerticalAnchorOffset = -1 * g_configParams.anchorVerticalOffset()
         self._wereOffsetsEdited = False
 
-        self._isDisplayingMarkers = self._displayMode == DisplayMode.ALWAYS
+        self._isDisplayingMarkers = g_configParams.displayMode() == DisplayMode.ALWAYS
         self._isMarkerDragging = False
 
-        if self._anchorPosition == AnchorPosition.TANK_MARKER:
+        if g_configParams.anchorPosition() == AnchorPosition.TANK_MARKER:
             self._markerPositionProvider = self._vehicleMarkerPositionProvider
-        elif self._anchorPosition == AnchorPosition.TANK_CENTER:
+        elif g_configParams.anchorPosition() == AnchorPosition.TANK_CENTER:
             self._markerPositionProvider = self._vehicleCenterPositionProvider
         else:
             self._markerPositionProvider = self._vehicleBottomPositionProvider
@@ -160,7 +156,7 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         # self.component.size = (1, 1)
 
     def _onKeyUp(self, event):
-        if self._displayMode == DisplayMode.ON_ALT_PRESSED:
+        if g_configParams.displayMode() == DisplayMode.ON_ALT_PRESSED:
             self._isDisplayingMarkers = event.isAltDown()
 
         if self._isMarkerDragging and self._isLeftMouseButton(event):
@@ -168,12 +164,13 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
             self.onMouseEvent -= self._onMarkerDragging
 
     def _onKeyDown(self, event):
-        if self._displayMode == DisplayMode.ON_ALT_PRESSED:
+        if g_configParams.displayMode() == DisplayMode.ON_ALT_PRESSED:
             self._isDisplayingMarkers = event.isAltDown()
 
         cursor = GUI.mcursor()
+        isOffsetChangeAllowed = not g_configParams.lockPositionOffsets()
 
-        if (self._isDisplayingMarkers and self._isOffsetChangeAllowed
+        if (self._isDisplayingMarkers and isOffsetChangeAllowed
                 and event.isCtrlDown() and self._isLeftMouseButton(event)
                 and cursor.inWindow and cursor.inFocus):
             mouseX, mouseY = cursor.position
@@ -205,12 +202,23 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
     # we have to be very concise in terms of optimisation and object allocation
     # the same goes for SWF app
     def py_requestFrameData(self):
-        screenResolution = GUI.screenResolution()
+        # if anything bad happens, don't make errors on AS3 side
+        # and at least tell it safely not to render stuff in such case
+        try:
+            screenResolution = GUI.screenResolution()
 
-        self._currentFrameData["screenWidth"] = self._currentScreenWidth = screenResolution[0]
-        self._currentFrameData["screenHeight"] = self._currentScreenHeight = screenResolution[1]
-        self._currentFrameData["observedVehicles"] = self._emptyList  # avoid allocating empty list in most cases
+            self._currentFrameData["screenWidth"] = self._currentScreenWidth = screenResolution[0]
+            self._currentFrameData["screenHeight"] = self._currentScreenHeight = screenResolution[1]
+            self._currentFrameData["observedVehicles"] = self._emptyList  # avoid allocating empty list in most cases
 
+            return self._requestFrameData()
+        except:
+            logger.warn("Error occurred on requesting frame data by DistanceMarkerFlash, "
+                        "safely skipping frame rendering", exc_info=True)
+            self._currentFrameData["observedVehicles"] = self._emptyList
+            return self._currentFrameData
+
+    def _requestFrameData(self):
         if not self._isDisplayingMarkers:
             # if markers are not displayed, return small constant data
             return self._currentFrameData
@@ -228,7 +236,7 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         currentVehicleID = -1
         currentVehicle = player.getVehicleAttached()
 
-        if currentVehicle is not None:
+        if self._isVehicleSafeToUse(currentVehicle):
             # use vehicle id for exclusion not to display marker for our tank
             currentVehicleID = currentVehicle.id
 
@@ -259,7 +267,7 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         #
         # we don't need "return to pool" logic, and we don't even want to do it
         # because returned dict must be valid until it is at least sent and serialized to SWF app
-        # we can't hook into that when it happens
+        # we can't hook into that when it happens (or doing that would be too complex)
         # so to keep things simple, leave resulting objects as they are
         #
         # after all that, we can safely reference same dicts again in next frame
@@ -273,13 +281,32 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         return self._currentFrameData
 
     def _shouldDisplayForVehicle(self, vehicle, currentVehicleID):
-        if not vehicle.isAlive() or vehicle.id == currentVehicleID:
+        if not self._isVehicleSafeToUse(vehicle) or vehicle.id == currentVehicleID:
             return False
 
-        if self._markerTarget == MarkerTarget.ALLY_AND_ENEMY:
+        if not vehicle.isAlive():
+            return False
+
+        if g_configParams.markerTarget() == MarkerTarget.ALLY_AND_ENEMY:
             return True
 
         return BigWorld.player().team != vehicle.publicInfo["team"]
+
+    @staticmethod
+    def _isVehicleSafeToUse(vehicle):
+        # vehicle as a BigWorld.Entity can sometimes be in "half initialized" state
+        # where its object exists, but is not yet been fully initialized
+        # by BigWorld (for ex. onEnterWorld() is not called yet)
+        #
+        # in such state, some properties are still not initialized, what can
+        # raise unexpected exception on methods like vehicle.isAlive()
+        # because vehicle.isCrewActive was not assigned yet
+        # or model parts access because visuals were not started yet
+        #
+        # vehicle.isStarted should be safe based on:
+        # - AvatarObserver.getVehicleAttached() method which does similar checks
+        # - Vehicle.startVisual() method which changes its prop to True when everything is fine
+        return vehicle is not None and vehicle.isStarted
 
     def _updateViewProjectionMatrix(self):
         proj = BigWorld.projection()
