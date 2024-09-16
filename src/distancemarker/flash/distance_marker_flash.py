@@ -306,7 +306,24 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         # vehicle.isStarted should be safe based on:
         # - AvatarObserver.getVehicleAttached() method which does similar checks
         # - Vehicle.startVisual() method which changes its prop to True when everything is fine
-        return vehicle is not None and vehicle.isStarted
+        #
+        # however - actually no
+        # for some mythical reason, extremely rarely, it IS NOT assigned to Vehicle object
+        # even through Vehicle class states that isStarted is assigned in its __init__ method,
+        # so it should be impossible, that accessing it would throw AttributeError, right?
+        #
+        #   File "src\distancemarker\flash\distance_marker_flash.py", line 309, in _isVehicleSafeToUse
+        # AttributeError: Type : Vehicle has no attribute: isStarted
+        #
+        # ???
+        #
+        # return False for such case, but I don't know how I even reproduced this
+        # I did see in some other spots that WG sometimes does the same through
+        # maybe I'm not the only one? lmao
+        #
+        # I literally only know this error exists because I sometimes notice it by accident in logs
+        # however - never when I want to reproduce them, lol
+        return vehicle is not None and getattr(vehicle, "isStarted", False)
 
     def _updateViewProjectionMatrix(self):
         proj = BigWorld.projection()
