@@ -81,9 +81,18 @@
     "- value 1.0 means full visibility,\n",
     "- value 0.0 means zero visibility."
   ],
+  "draw-text-outline.header": "Draw text outline",
+  "draw-text-outline.body": [
+    "When checked, text is additionally displayed with black outline.\n",
+    "Very useful when text blends with arbitrary shapes (for example: hover icon of vehicle markers)."
+  ],
   "draw-text-shadow.header": "Draw text shadow",
   "draw-text-shadow.body": [
     "When checked, text is additionally displayed with smooth gradient shadow.\n",
     "Useful when text blends with background."
+  ],
+  "draw-distance-unit.header": "Draw distance unit",
+  "draw-distance-unit.body": [
+    "When checked, distance is additionally displayed with meter unit (like \"420 m\")."
   ]
 }

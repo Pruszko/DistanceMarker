@@ -146,5 +146,11 @@ class Tr(object):
     TEXT_ALPHA_HEADER = TranslationElement("text-alpha.header")
     TEXT_ALPHA_BODY = TranslationList("text-alpha.body")
 
+    DRAW_TEXT_OUTLINE_HEADER = TranslationElement("draw-text-outline.header")
+    DRAW_TEXT_OUTLINE_BODY = TranslationList("draw-text-outline.body")
+
     DRAW_TEXT_SHADOW_HEADER = TranslationElement("draw-text-shadow.header")
     DRAW_TEXT_SHADOW_BODY = TranslationList("draw-text-shadow.body")
+
+    DRAW_DISTANCE_UNIT_HEADER = TranslationElement("draw-distance-unit.header")
+    DRAW_DISTANCE_UNIT_BODY = TranslationList("draw-distance-unit.body")

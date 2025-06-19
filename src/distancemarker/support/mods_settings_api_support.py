@@ -176,9 +176,17 @@ def _createVisualSettings():
             header=Tr.TEXT_ALPHA_HEADER,
             body=Tr.TEXT_ALPHA_BODY
         ),
+        g_configParams.drawTextOutline.renderParam(
+            header=Tr.DRAW_TEXT_OUTLINE_HEADER,
+            body=Tr.DRAW_TEXT_OUTLINE_BODY
+        ),
         g_configParams.drawTextShadow.renderParam(
             header=Tr.DRAW_TEXT_SHADOW_HEADER,
             body=Tr.DRAW_TEXT_SHADOW_BODY
+        ),
+        g_configParams.drawDistanceUnit.renderParam(
+            header=Tr.DRAW_DISTANCE_UNIT_HEADER,
+            body=Tr.DRAW_DISTANCE_UNIT_BODY
         )
     ]
 

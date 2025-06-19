@@ -85,11 +85,22 @@ CONFIG_TEMPLATE = """{
 
     // Valid values: true/false (default: true)
     //
+    // When set to true, text is additionally displayed with black outline.
+    // Very useful when text blends with arbitrary shapes (for example: hover icon of vehicle markers).
+    "draw-text-outline": %(draw-text-outline)s,
+
+    // Valid values: true/false (default: true)
+    //
     // When set to true, text is additionally displayed with smooth gradient shadow.
     // Useful when text blends with background.
     "draw-text-shadow": %(draw-text-shadow)s,
 
+    // Valid values: true/false (default: true)
+    //
+    // When set to true, distance is additionally displayed with meter unit (like "420 m").
+    "draw-distance-unit": %(draw-distance-unit)s,
+
     // DO NOT touch "__version__" field
     // It is used by me to seamlessly update config file :)
-    "__version__": 1
+    "__version__": 2
 }"""

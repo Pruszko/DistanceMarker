@@ -5,13 +5,13 @@ import SCALEFORM
 import Math
 import logging
 
-from Event import EventManager, Event
 from gui import DEPTH_OF_VehicleMarker, InputHandler
 from gui.Scaleform.daapi.view.external_components import ExternalFlashComponent, ExternalFlashSettings
 from gui.Scaleform.flash_wrapper import InputKeyMode
 from gui.Scaleform.framework.entities.BaseDAAPIModule import BaseDAAPIModule
 
 from distancemarker.flash import serializeConfigParams
+from distancemarker.hooks import aih_hooks
 from distancemarker.settings import clamp
 from distancemarker.settings.config import g_config
 from distancemarker.settings.config_param import g_configParams, DisplayMode, AnchorPosition, MarkerTarget
@@ -37,6 +37,75 @@ class _SimpleDictPool(object):
             self.pool.append({})
 
 
+class _ConfigState(object):
+
+    def __init__(self, distanceMarker):
+        self._distanceMarker = distanceMarker
+
+        self.currentHorizontalAnchorOffset = g_configParams.anchorHorizontalOffset()
+        self.currentVerticalAnchorOffset = -1 * g_configParams.anchorVerticalOffset()
+        self.isDisplayingMarkers = g_configParams.displayMode() == DisplayMode.ALWAYS
+
+        self._wereOffsetsEdited = False
+        self._isMarkerDragging = False
+
+        InputHandler.g_instance.onKeyDown += self._onKeyDown
+        InputHandler.g_instance.onKeyUp += self._onKeyUp
+
+    def _onKeyDown(self, event):
+        if g_configParams.displayMode() == DisplayMode.ON_ALT_PRESSED:
+            self.isDisplayingMarkers = event.isAltDown()
+
+        cursor = GUI.mcursor()
+        isOffsetChangeAllowed = not g_configParams.lockPositionOffsets()
+
+        if (self.isDisplayingMarkers and isOffsetChangeAllowed
+                and event.isCtrlDown() and self._isLeftMouseButton(event)
+                and cursor.inWindow and cursor.inFocus):
+            mouseX, mouseY = cursor.position
+            screenX, screenY = self._distanceMarker.toScreenPixelPosition(mouseX, mouseY)
+
+            if self._distanceMarker.as_isPointInMarker(screenX, screenY):
+                aih_hooks.onMouseEvent += self._onMarkerDragging
+                self._isMarkerDragging = True
+
+    def _onKeyUp(self, event):
+        if g_configParams.displayMode() == DisplayMode.ON_ALT_PRESSED:
+            self.isDisplayingMarkers = event.isAltDown()
+
+        if self._isMarkerDragging and self._isLeftMouseButton(event):
+            aih_hooks.onMouseEvent -= self._onMarkerDragging
+            self._isMarkerDragging = False
+
+    def _onMarkerDragging(self, dx, dy):
+        self.currentHorizontalAnchorOffset = clamp(g_configParams.anchorHorizontalOffset.minValue,
+                                                   self.currentHorizontalAnchorOffset + dx,
+                                                   g_configParams.anchorHorizontalOffset.maxValue)
+        self.currentVerticalAnchorOffset = clamp(g_configParams.anchorVerticalOffset.minValue,
+                                                 self.currentVerticalAnchorOffset + dy,
+                                                 g_configParams.anchorVerticalOffset.maxValue)
+
+        self._wereOffsetsEdited = True
+
+    @staticmethod
+    def _isLeftMouseButton(event):
+        return event.isMouseButton() and event.key == Keys.KEY_LEFTMOUSE
+
+    def persistParamsIfChanged(self):
+        if self._wereOffsetsEdited:
+            g_configParams.anchorHorizontalOffset.value = self.currentHorizontalAnchorOffset
+            g_configParams.anchorVerticalOffset.value = -1 * self.currentVerticalAnchorOffset
+            g_config.persistParamsSafely()
+
+    def close(self):
+        if self._isMarkerDragging:
+            aih_hooks.onMouseEvent -= self._onMarkerDragging
+            self._isMarkerDragging = False
+
+        InputHandler.g_instance.onKeyDown -= self._onKeyDown
+        InputHandler.g_instance.onKeyUp -= self._onKeyUp
+
+
 class DistanceMarkerFlashMeta(BaseDAAPIModule):
 
     def as_applyConfig(self, serializedConfig):
@@ -49,10 +118,6 @@ class DistanceMarkerFlashMeta(BaseDAAPIModule):
 
 
 class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
-
-    _eventManager = EventManager()
-
-    onMouseEvent = Event(_eventManager)
 
     def __init__(self, vehicleMarkerClass):
         super(DistanceMarkerFlash, self).__init__(
@@ -68,12 +133,7 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         self._configureApp()
 
         # config state
-        self._currentHorizontalAnchorOffset = g_configParams.anchorHorizontalOffset()
-        self._currentVerticalAnchorOffset = -1 * g_configParams.anchorVerticalOffset()
-        self._wereOffsetsEdited = False
-
-        self._isDisplayingMarkers = g_configParams.displayMode() == DisplayMode.ALWAYS
-        self._isMarkerDragging = False
+        self._configState = _ConfigState(self)
 
         if g_configParams.anchorPosition() == AnchorPosition.TANK_MARKER:
             self._markerPositionProvider = self._vehicleMarkerPositionProvider
@@ -98,26 +158,15 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
             "observedVehicles": self._emptyList
         }
 
-        InputHandler.g_instance.onKeyUp += self._onKeyUp
-        InputHandler.g_instance.onKeyDown += self._onKeyDown
-
         serializedConfig = serializeConfigParams()
         self.as_applyConfig(serializedConfig)
 
     def close(self):
-        if self._isMarkerDragging:
-            self.onMouseEvent -= self._onMarkerDragging
-            self._isMarkerDragging = False
-
-        InputHandler.g_instance.onKeyUp -= self._onKeyUp
-        InputHandler.g_instance.onKeyDown -= self._onKeyDown
+        self._configState.close()
 
         super(DistanceMarkerFlash, self).close()
 
-        if self._wereOffsetsEdited:
-            g_configParams.anchorHorizontalOffset.value = self._currentHorizontalAnchorOffset
-            g_configParams.anchorVerticalOffset.value = -1 * self._currentVerticalAnchorOffset
-            g_config.persistParamsSafely()
+        self._configState.persistParamsIfChanged()
 
     def _configureApp(self):
         # this is needed, otherwise everything will be white
@@ -155,45 +204,6 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         #
         # self.component.size = (1, 1)
 
-    def _onKeyUp(self, event):
-        if g_configParams.displayMode() == DisplayMode.ON_ALT_PRESSED:
-            self._isDisplayingMarkers = event.isAltDown()
-
-        if self._isMarkerDragging and self._isLeftMouseButton(event):
-            self._isMarkerDragging = False
-            self.onMouseEvent -= self._onMarkerDragging
-
-    def _onKeyDown(self, event):
-        if g_configParams.displayMode() == DisplayMode.ON_ALT_PRESSED:
-            self._isDisplayingMarkers = event.isAltDown()
-
-        cursor = GUI.mcursor()
-        isOffsetChangeAllowed = not g_configParams.lockPositionOffsets()
-
-        if (self._isDisplayingMarkers and isOffsetChangeAllowed
-                and event.isCtrlDown() and self._isLeftMouseButton(event)
-                and cursor.inWindow and cursor.inFocus):
-            mouseX, mouseY = cursor.position
-            screenX, screenY = self._toScreenPixelPosition(mouseX, mouseY)
-
-            if self.as_isPointInMarker(screenX, screenY):
-                self._isMarkerDragging = True
-                self.onMouseEvent += self._onMarkerDragging
-
-    @staticmethod
-    def _isLeftMouseButton(event):
-        return event.isMouseButton() and event.key == Keys.KEY_LEFTMOUSE
-
-    def _onMarkerDragging(self, dx, dy):
-        self._currentHorizontalAnchorOffset = clamp(g_configParams.anchorHorizontalOffset.minValue,
-                                                    self._currentHorizontalAnchorOffset + dx,
-                                                    g_configParams.anchorHorizontalOffset.maxValue)
-        self._currentVerticalAnchorOffset = clamp(g_configParams.anchorVerticalOffset.minValue,
-                                                  self._currentVerticalAnchorOffset + dy,
-                                                  g_configParams.anchorVerticalOffset.maxValue)
-
-        self._wereOffsetsEdited = True
-
     # IMPORTANT
     # this method is called by a swf app every frame in-between game logic
     # even on its pause in replays
@@ -219,7 +229,7 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
             return self._currentFrameData
 
     def _requestFrameData(self):
-        if not self._isDisplayingMarkers:
+        if not self._configState.isDisplayingMarkers:
             # if markers are not displayed, return small constant data
             return self._currentFrameData
 
@@ -342,13 +352,13 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         markerPosition3d = self._markerPositionProvider(vehicle)
         projectedMarkerPosition2d, isPointOnScreen = self._projectPointWithVisibilityResult(markerPosition3d)
 
-        x, y = self._toScreenPixelPosition(projectedMarkerPosition2d.x, projectedMarkerPosition2d.y)
+        x, y = self.toScreenPixelPosition(projectedMarkerPosition2d.x, projectedMarkerPosition2d.y)
 
         # modify and return pooled dict
         pooledVehicleDict["id"] = str(vehicle.id),
         pooledVehicleDict["currentDistance"] = currentDistance,
-        pooledVehicleDict["x"] = x + self._currentHorizontalAnchorOffset,
-        pooledVehicleDict["y"] = y + self._currentVerticalAnchorOffset,
+        pooledVehicleDict["x"] = x + self._configState.currentHorizontalAnchorOffset,
+        pooledVehicleDict["y"] = y + self._configState.currentVerticalAnchorOffset,
         pooledVehicleDict["isVisible"] = isPointOnScreen
 
         return pooledVehicleDict
@@ -399,7 +409,7 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
 
         return posInClip, visible
 
-    def _toScreenPixelPosition(self, x, y):
+    def toScreenPixelPosition(self, x, y):
         normalizedX = 0.5 + 0.5 * x
         normalizedY = 0.5 - 0.5 * y
 

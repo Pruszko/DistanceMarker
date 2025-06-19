@@ -81,9 +81,18 @@
     "- wartość 1.0 oznacza pełną widoczność,\n",
     "- wartość 0.0 oznacza brak widoczności."
   ],
+  "draw-text-outline.header": "Wyświetlaj obramowanie tekstu",
+  "draw-text-outline.body": [
+    "Gdy zaznaczone, teksty wyświetlany jest dodatkowo z czarnym obramowaniem.\n",
+    "Bardzo przydatne gdy tekst zlewa się z różnymi kształtami (na przykład: z ikoną najechania na znacznik pojazdu)."
+  ],
   "draw-text-shadow.header": "Wyświetlaj cień tekstu",
   "draw-text-shadow.body": [
     "Gdy zaznaczone, teksty wyświetlany jest dodatkowo z gładkim cieniem.\n",
     "Przydatne gdy tekst zlewa się z tłem."
+  ],
+  "draw-distance-unit.header": "Wyświetlaj jednostkę odległości",
+  "draw-distance-unit.body": [
+    "Gdy zaznaczone, odległość jest dodatkowo wyświetlana z jednostką metrów (przykładowo \"420 m\")."
   ]
 }

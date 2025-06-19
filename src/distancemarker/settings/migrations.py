@@ -9,9 +9,10 @@ logger = logging.getLogger(__name__)
 
 class ConfigVersion(object):
 
-    V1_1_0 = 1
+    V2_1_0 = 1
+    V2_2_0 = 2
 
-    CURRENT = V1_1_0
+    CURRENT = V2_2_0
 
 
 def performConfigMigrations():
@@ -24,7 +25,7 @@ def performConfigMigrations():
         if isVersion(configDict, ConfigVersion.CURRENT):
             return
 
-        # nothing to migrate yet
+        v2_2_0_addTextOutlineAndDistanceUnitParameters(configDict)
 
         g_configFiles.config.writeConfigDict(configDict)
     except ConfigException:
@@ -36,9 +37,22 @@ def performConfigMigrations():
                               "Contact mod developer for further support with provided logs.")
 
 
+def v2_2_0_addTextOutlineAndDistanceUnitParameters(configDict):
+    if not isVersion(configDict, ConfigVersion.V2_1_0):
+        return
+
+    logger.info("Migrating config file from version 2.1.x to 2.2.x ...")
+
+    configDict["draw-text-outline"] = False
+    configDict["draw-distance-unit"] = True
+    progressVersion(configDict)
+
+    logger.info("Migration finished.")
+
+
 def progressVersion(configDict):
     if "__version__" not in configDict:
-        configDict["__version__"] = ConfigVersion.V1_1_0
+        configDict["__version__"] = ConfigVersion.V2_1_0
         return
 
     configDict["__version__"] = int(configDict["__version__"]) + 1
@@ -46,6 +60,6 @@ def progressVersion(configDict):
 
 def isVersion(configDict, version):
     if "__version__" not in configDict:
-        return ConfigVersion.V1_1_0 == version
+        return ConfigVersion.V2_1_0 == version
 
     return int(configDict["__version__"]) == version

@@ -97,8 +97,16 @@ class ConfigParams(object):
             minValue=0.0, step=0.01, maxValue=1.0,
             defaultValue=1.0
         )
+        self.drawTextOutline = BooleanParam(
+            ["draw-text-outline"],
+            defaultValue=True
+        )
         self.drawTextShadow = BooleanParam(
             ["draw-text-shadow"],
+            defaultValue=True
+        )
+        self.drawDistanceUnit = BooleanParam(
+            ["draw-distance-unit"],
             defaultValue=True
         )
 

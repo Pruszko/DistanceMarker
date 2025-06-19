@@ -7,7 +7,9 @@ def serializeConfigParams():
         "text-size": g_configParams.textSize(),
         "text-color": _serializeColorTuple(g_configParams.textColor()),
         "text-alpha": g_configParams.textAlpha(),
-        "draw-text-shadow": g_configParams.drawTextShadow()
+        "draw-text-outline": g_configParams.drawTextOutline(),
+        "draw-text-shadow": g_configParams.drawTextShadow(),
+        "draw-distance-unit": g_configParams.drawDistanceUnit()
     }
 
 
