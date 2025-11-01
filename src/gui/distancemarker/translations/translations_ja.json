@@ -1,0 +1,98 @@
+{
+  "modname": "Distance Marker",
+  "checked": "有効",
+  "unchecked": "無効",
+  "defaultValue": "デフォルト",
+  "intro.label": "設定ファイルについて",
+  "intro.header": "設定ファイル",
+  "intro.body": [
+    "設定は、設定ファイルを直接編集することでも変更できます。\n\n",
+    "設定ファイルの場所:\n",
+    "- [WoTのインストール先]/mods/configs/DistanceMarker/config.json"
+  ],
+  "intro.note": [
+    "デフォルトの設定に戻したい場合は、既存のファイルを削除してからゲームを再起動してください。"
+  ],
+  "visibility-settings.label": "表示設定",
+  "display-mode.header": "表示モード",
+  "display-mode.body": [
+    "マーカーを表示するタイミング:\n",
+    "- 常時 - 常にマーカーを表示します。\n",
+    "- Altが押されている間 - Altキーが押されている間マーカーを表示します。"
+  ],
+  "display-mode.option.always": "常時",
+  "display-mode.option.on-alt-pressed": "Altが押されている間",
+  "marker-target.header": "表示対象",
+  "marker-target.body": [
+    "マーカーを表示する対象:\n",
+    "- 敵と味方 - 全ての戦車に表示します。\n",
+    "- 敵のみ - 敵の戦車に表示します。"
+  ],
+  "marker-target.option.ally-and-enemy": "敵と味方",
+  "marker-target.option.only-enemy": "敵のみ",
+  "position-settings.label": "位置設定 (対戦中にマウスで動かせます)",
+  "anchor-position.header": "基準位置",
+  "anchor-position.body": [
+    "位置補正が0のときマーカーが表示される位置の基準:\n",
+    "- 戦車マーカー - ゲームの標準マーカーの位置に表示します。\n",
+    "- 戦車の中央 - 戦車の中央に表示します。\n",
+    "- 戦車の下部 - 戦車の下部に表示します。"
+  ],
+  "anchor-position.option.tank-marker": "戦車マーカー",
+  "anchor-position.option.tank-center": "戦車の中央",
+  "anchor-position.option.tank-bottom": "戦車の下部",
+  "lock-position-offsets.header": "対戦中にマーカーの位置補正を固定する",
+  "lock-position-offsets.body": [
+    "有効にすると, 対戦中にマーカーの位置補正が変更できなくなります。\n",
+    "誤って補正値を変更するのを防ぐことができます。"
+  ],
+  "anchor-horizontal-offset.header": "水平方向の位置補正",
+  "anchor-horizontal-offset.body": [
+    "マーカーの基準位置からの水平方向の位置を、ピクセル単位で変更できます。\n",
+    "正の値は右に、負の値は左に表示位置が移動します。\n\n",
+    "小技: 位置補正は、対戦中にCtrlキーを押しながらマウスカーソルでドラッグすることで、",
+    "表示位置を確認しながら変更することができます。\n",
+    "値はゲームの終了時または退出時に設定へ保存されます。"
+  ],
+  "anchor-vertical-offset.header": "垂直方向の位置補正",
+  "anchor-vertical-offset.body": [
+    "マーカーの基準位置からの垂直方向の位置を、ピクセル単位で変更できます。\n",
+    "正の値は上に、負の値は下に表示位置が移動します。\n\n",
+    "小技: 位置補正は、対戦中にCtrlキーを押しながらマウスカーソルでドラッグすることで、",
+    "表示位置を確認しながら変更することができます。\n",
+    "値はゲームの終了時または退出時に設定へ保存されます。"
+  ],
+  "visual-settings.label": "見た目の設定",
+  "decimal-precision.header": "小数点以下の桁数",
+  "decimal-precision.body": [
+    "表示する小数点以下の桁数を設定します。"
+  ],
+  "text-size.header": "文字の大きさ",
+  "text-size.body": [
+    "マーカーの文字の大きさを設定します。"
+  ],
+  "text-color.header": "文字の色",
+  "text-color.body": [
+    "マーカーの文字の色を設定します。"
+  ],
+  "text-alpha.header": "文字の透明度",
+  "text-alpha.body": [
+    "マーカーの文字の透明度:\n",
+    "- 1.0で透けずに表示されます。\n",
+    "- 0.0で透明になります。"
+  ],
+  "draw-text-outline.header": "文字の縁取り",
+  "draw-text-outline.body": [
+    "有効にすると、マーカーの文字が黒で縁取りされます。\n",
+    "マーカーを何かに重ねて配置する場合(車輛アイコンの上など)で非常に便利です。"
+  ],
+  "draw-text-shadow.header": "文字の影",
+  "draw-text-shadow.body": [
+    "有効にすると、文字にぼんやりとした影が表示されます。\n",
+    "マーカーを背景に馴染ませたい場合に便利です。"
+  ],
+  "draw-distance-unit.header": "単位を表示する",
+  "draw-distance-unit.body": [
+    "有効にすると、「420 m」のように単位mが表示されるようになります。"
+  ]
+}
