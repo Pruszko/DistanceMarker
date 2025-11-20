@@ -32,3 +32,4 @@ Thanks to:
 * POLIROID - for ModsListAPI
 * shuxue - for Russian translations
 * eugenescodes - for Ukrainian translations
+* Siro256 - for Japanese translations
