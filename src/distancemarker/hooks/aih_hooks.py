@@ -8,9 +8,9 @@ onMouseEvent = Event()
 
 
 @overrideIn(AvatarInputHandler)
-def handleMouseEvent(func, self, dx, dy, dz):
-    result = func(self, dx, dy, dz)
+def handleMouseEvent(func, self, event):
+    result = func(self, event)
 
-    onMouseEvent(dx, dy)
+    onMouseEvent(event.dx, event.dy)
 
     return result

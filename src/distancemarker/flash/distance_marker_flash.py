@@ -9,6 +9,9 @@ from gui import DEPTH_OF_VehicleMarker, InputHandler
 from gui.Scaleform.daapi.view.external_components import ExternalFlashComponent, ExternalFlashSettings
 from gui.Scaleform.flash_wrapper import InputKeyMode
 from gui.Scaleform.framework.entities.BaseDAAPIModule import BaseDAAPIModule
+from gui.battle_control.controllers.prebattle_highlights.controller import PrebattleHighlightsController
+from helpers import dependency
+from skeletons.gui.battle_session import IBattleSessionProvider
 
 from distancemarker.flash import serializeConfigParams
 from distancemarker.hooks import aih_hooks
@@ -118,6 +121,8 @@ class DistanceMarkerFlashMeta(BaseDAAPIModule):
 
 
 class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
+
+    sessionProvider = dependency.descriptor(IBattleSessionProvider)  # type: IBattleSessionProvider
 
     def __init__(self, vehicleMarkerClass):
         super(DistanceMarkerFlash, self).__init__(
@@ -241,6 +246,11 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         # if GUI is hidden, hide markers as well
         avatarInputHandler = player.inputHandler
         if avatarInputHandler is not None and not avatarInputHandler.isGuiVisible:
+            return self._currentFrameData
+
+        pbhCtrl = self.sessionProvider.dynamic.prebattleHighlightsController
+        pbhShowing = pbhCtrl is not None and pbhCtrl.displayingHighlights
+        if pbhShowing:
             return self._currentFrameData
 
         currentVehicleID = -1
