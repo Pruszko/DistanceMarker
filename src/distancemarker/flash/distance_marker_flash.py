@@ -5,11 +5,11 @@ import SCALEFORM
 import Math
 import logging
 
+from Avatar import PlayerAvatar
 from gui import DEPTH_OF_VehicleMarker, InputHandler
 from gui.Scaleform.daapi.view.external_components import ExternalFlashComponent, ExternalFlashSettings
 from gui.Scaleform.flash_wrapper import InputKeyMode
 from gui.Scaleform.framework.entities.BaseDAAPIModule import BaseDAAPIModule
-from gui.battle_control.controllers.prebattle_highlights.controller import PrebattleHighlightsController
 from helpers import dependency
 from skeletons.gui.battle_session import IBattleSessionProvider
 
@@ -243,11 +243,27 @@ class DistanceMarkerFlash(ExternalFlashComponent, DistanceMarkerFlashMeta):
         if player is None:
             return self._currentFrameData
 
+        # when some other mod crashes at the battle finish (basically corrupting entire battle HUD in hangar)
+        # then Distance Marker is NOT closed AND in hangar - where player is PlayerAccount instead of PlayerAvatar
+        # which has quite different state and spams logs, making real root cause of HUD crash harder to find
+        #
+        # this is a safe check, so Distance Marker close immediately and gracefully
+        # when such abnormal game state is detected
+        if not isinstance(player, PlayerAvatar):
+            logger.error("Error occurred on requesting frame data by DistanceMarkerFlash")
+            logger.error("BigWorld.player() is not PlayerAvatar (some other mod above in logs crashed at battle exit?)")
+            logger.error("This is most likely corrupted game state - closing distance marker flash app gracefully")
+            from distancemarker.hooks.vehicle_plugins_hooks import closeFlashGracefully
+            closeFlashGracefully()
+
+            return self._currentFrameData
+
         # if GUI is hidden, hide markers as well
         avatarInputHandler = player.inputHandler
         if avatarInputHandler is not None and not avatarInputHandler.isGuiVisible:
             return self._currentFrameData
 
+        # don't display markers during spotlight
         pbhCtrl = self.sessionProvider.dynamic.prebattleHighlightsController
         pbhShowing = pbhCtrl is not None and pbhCtrl.displayingHighlights
         if pbhShowing:

@@ -30,6 +30,10 @@ def start(func, self):
 def stop(func, self):
     func(self)
 
+    closeFlashGracefully()
+
+
+def closeFlashGracefully():
     try:
         global g_distanceMarkerFlash
         if g_distanceMarkerFlash is not None:
